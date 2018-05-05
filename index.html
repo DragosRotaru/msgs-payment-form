@@ -1,0 +1,140 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+    <style>
+      * {
+        font-family: 'Roboto', sans-serif;
+      }
+      #disclaimer {
+        margin: 20px;
+      }
+      #payment-form {
+        width: 100%;
+        height: 100%;
+        text-align: center;
+      }
+      .button {
+        background-color: #4CAF50; /* Green */
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        width: 100%;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+      }
+      .StripeElement {
+        background-color: white;
+        height: 40px;
+        padding: 10px 12px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        box-shadow: 0 1px 3px 0 #e6ebf1;
+        -webkit-transition: box-shadow 150ms ease;
+        transition: box-shadow 150ms ease;
+      }
+
+      .StripeElement--focus {
+        box-shadow: 0 1px 3px 0 #cfd7df;
+      }
+
+      .StripeElement--invalid {
+        border-color: #fa755a;
+      }
+
+      .StripeElement--webkit-autofill {
+        background-color: #fefde5 !important;
+      }
+    </style>
+  </head>
+  <body>
+      <form action="/charge" method="post" id="payment-form">
+        <div class="form-row">
+          <div id="card-element"></div>
+          <div id="card-errors" role="alert"></div>
+        </div>
+        <button class="button">Submit Card Info and Book</button>
+        <p id="disclaimer">
+            MowGoSnowGo does not store your payment card information.
+            Your card will only be charged on completion of the job. You may cancel your request with no penalty for an hour after making the request.
+            Afterwards, you will be charged a $20 cancellation fee.
+          </p>
+      </form>
+      <div id="log"></div>
+  </body>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    var old = console.log;
+    var logger = document.getElementById('log');
+    console.log = function (message) {
+        if (typeof message == 'object') {
+            logger.innerHTML += JSON.stringify(message) + '<br />';
+        } else {
+            logger.innerHTML += message + '<br />';
+        }
+    }
+    try {
+      var stripe = Stripe('pk_live_JGEQSlckSzNa2JRQgjaufebv'); 
+      var elements = stripe.elements({
+        locale: 'auto',
+      });
+      var style = {
+        base: {
+          color: '#32325d',
+          lineHeight: '18px',
+          fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+          fontSmoothing: 'antialiased',
+          fontSize: '16px',
+          '::placeholder': {
+            color: '#aab7c4'
+          }
+        },
+        invalid: {
+          color: '#fa755a',
+          iconColor: '#fa755a'
+        }
+      };
+
+      // Card Input
+      var card = elements.create('card', {style: style});
+      card.mount('#card-element');
+
+      var isLoading = false;
+      // Errors
+      card.addEventListener('change', function(event) {
+        var displayError = document.getElementById('card-errors');
+        if (event.error) {
+          displayError.textContent = event.error.message;
+        } else {
+          displayError.textContent = '';
+        }
+      });
+
+      var form = document.getElementById('payment-form');
+      form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        if (!isLoading) {
+          isLoading = true;
+          stripe.createSource(card, {
+          type: 'card',
+          currency: 'cad',
+          }).then(function(result) {
+          if (result.error) {
+            // Inform the user if there was an error.
+            var errorElement = document.getElementById('card-errors');
+            errorElement.textContent = result.error.message;
+            isLoading = false;
+          } else {
+            // Send the token to your server.
+            window.postMessage(JSON.stringify(result));
+          }
+        }); 
+        }
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  </script>
+</html>
